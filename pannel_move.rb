@@ -1,0 +1,2 @@
+class PanelMove
+end
