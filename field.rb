@@ -7,20 +7,25 @@ class Field
   # フィールドのリセット
   def initialize_field
     @field = Array.new(WIDTH){Array.new(WIDTH){0}}
-    @read = 0
   end
 
   # パネルの自動生成(2か4を生成する)
-  def generate_seed(l = rand(WIDTH), r = rand(WIDTH))
-    unless l > WIDTH-1 || l < 0 || r > WIDTH - 1 || r < 0
-      seed = rand(2)
-      @read += 1
-      if @field[l][r] == 0
-        @field[l][r] = (seed+1) * 2
-        p @read
-      else
-        generate_seed # 0が見つかるまで再帰。読み込み回数多すぎぃ！
+  def generate_seed
+    if @field.flatten.select{|n| n == 0}.length > 0
+      # 生成する数値の決定
+      seed = (rand(2)+1) * 2
+      # 0のindex配列
+      tmp = []
+      @field.flatten.each_with_index do |n, i|
+        if n == 0 then
+          tmp << i
+        end
       end
+      # 生成する場所のランダム取得
+      index = tmp.sample
+      @field[index/WIDTH][index%WIDTH] = seed
+    else
+      game_over_check
     end
   end
 
