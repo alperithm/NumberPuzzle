@@ -1,4 +1,5 @@
 class Field
+  # フィールドの広さ(固定)
   WIDTH = 4
 
   ###################################
@@ -14,7 +15,7 @@ class Field
     if @field.flatten.select{|n| n == 0}.length > 0
       # 生成する数値の決定
       seed = (rand(2)+1) * 2
-      # 0のindex配列
+      # 0のindex格納配列
       tmp = []
       @field.flatten.each_with_index do |n, i|
         if n == 0 then
@@ -38,7 +39,17 @@ class Field
 
   # ゲームオーバーチェック
   def game_over_check
-    
+    tmp_field = @field
+    left_slide
+    right_slide
+    up_slide
+    down_slide
+    if @field == tmp_field
+      # game over時の出力
+      p "Game Over!"
+    else
+      @field = tmp_field
+    end
   end
 
   # パネル合体時の処理(左スライド)
