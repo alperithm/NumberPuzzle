@@ -1,6 +1,10 @@
 class Field
   # フィールドの広さ(固定)
   WIDTH = 4
+  # 生成する数値の設定
+  NUMBER = 2
+  # ゴール値の設定
+  GOAL = 8
 
   ###################################
   ## フィールド生成・処理           #
@@ -37,21 +41,6 @@ class Field
     generate_seed
   end
 
-  # ゲームオーバーチェック
-  def game_over_check
-    tmp_field = @field
-    left_slide
-    right_slide
-    up_slide
-    down_slide
-    if @field == tmp_field
-      # game over時の出力
-      p "Game Over!"
-    else
-      @field = tmp_field
-    end
-  end
-
   # パネル合体時の処理(左スライド)
   def union_panel(n1, n2, n3, n4)
     if n1 == n2 then
@@ -77,6 +66,7 @@ class Field
   ###################################
   # 左入力時の処理
   def left_slide
+    tmp_field = Marshal.load(Marshal.dump(@field))
     # @fieldへ格納する行の指定変数
     line_number = 0
     @field.each do |n1, n2, n3, n4|
@@ -91,42 +81,29 @@ class Field
       end
       line_number += 1
     end
+    if @field != tmp_field
+      generate_seed
+    end
   end
 
   # 右入力時の処理 
   def right_slide
-    # @fieldへ格納する行の指定変数
-    line_number = 0
-    @field.each do |n1, n2, n3, n4|
-      # 行に要素がある場合のみ移動を行う
-      unless n1 == 0 && n2 == 0 && n3 == 0 && n4 == 0
-        # 要素に0が含まれる場合、全て右に詰める
-        line_arr = [n1, n2, n3, n4].select{|n| n != 0}
-        while (WIDTH - line_arr.length) > 0 do
-          line_arr.unshift(0)
-        end
-        # 右方向にunion_panelを利用
-        @field[line_number] = union_panel(*line_arr.reverse)
-      end
-      line_number += 1
-    end
+    @field.each{|n| n.reverse!}
+    left_slide
+    @field.each{|n| n.reverse!}
   end
 
   # 上入力時の処理
   def up_slide
-    # 転置行列の生成
     @field = @field.transpose
     left_slide
-    # 転置を戻す
     @field = @field.transpose
   end
 
   # 下入力時の処理
   def down_slide
-    # 転置行列の生成
     @field = @field.transpose
     right_slide
-    # 転置を戻す
     @field = @field.transpose
   end
 
@@ -141,7 +118,44 @@ class Field
   # 現在のフィールドをコンソールに表示する
   def show_field
     @field.each do |n1, n2, n3, n4|
-      print("[#{n1}] [#{n2}] [#{n3}] [#{n4}]\n")
+      s1 = n1.to_s
+      s2 = n2.to_s
+      s3 = n3.to_s
+      s4 = n4.to_s
+      while s1.length < 4
+        s1 = " " << s1
+      end
+      while s2.length < 4
+        s2 = " " << s2
+      end
+      while s3.length < 4
+        s3 = " " << s3
+      end
+      while s4.length < 4
+        s4 = " " << s4
+      end
+      print("[#{s1}] [#{s2}] [#{s3}] [#{s4}]\n")
+    end
+  end
+
+  # ゲームクリアチェック
+  def goal_check
+    @field.flatten.max >= GOAL
+  end
+
+  # ゲームオーバーチェック
+  def game_over_check
+    tmp_field = Marshal.load(Marshal.dump(@field))
+    left_slide
+    right_slide
+    up_slide
+    down_slide
+    if @field == tmp_field
+      # game over時の出力
+      return true
+    else
+      @field = tmp_field
+      return false
     end
   end
 
