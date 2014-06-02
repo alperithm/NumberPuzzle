@@ -1,10 +1,18 @@
+require 'curses'
+
+Curses.start_color
+Curses.init_pair 1, Curses::COLOR_YELLOW, Curses::COLOR_BLACK
+Curses.init_pair 2, Curses::COLOR_BLACK, Curses::COLOR_RED
+Curses.init_pair 3, Curses::COLOR_RED, Curses::COLOR_WHITE
+Curses.init_pair 4, Curses::COLOR_BLACK, Curses::COLOR_BLACK
+
 class Field
   # フィールドの広さ(固定)
   WIDTH = 4
   # 生成する数値の設定
   NUMBER = 2
   # ゴール値の設定
-  GOAL = 8
+  GOAL = 2048
 
   ###################################
   ## フィールド生成・処理           #
@@ -12,6 +20,8 @@ class Field
   # フィールドのリセット
   def initialize_field
     @field = Array.new(WIDTH){Array.new(WIDTH){0}}
+    @score = 0
+    @bomb_counter = 0
   end
 
   # パネルの自動生成(2か4を生成する)
@@ -37,8 +47,7 @@ class Field
   # ゲーム開始の状態にする
   def game_start
     initialize_field
-    generate_seed
-    generate_seed
+    2.times{generate_seed}
   end
 
   # パネル合体時の処理(左スライド)
@@ -59,6 +68,74 @@ class Field
       n4 = 0
     end
     [ n1, n2, n3, n4 ]
+  end
+
+  # ボムの処理
+  def bomb
+    Curses.setpos(1, 0)
+    Curses.addstr("Please choose the place to bomb")
+    Curses.setpos(5, 0)
+    Curses.addstr("+------a------b------c------+     ")
+    Curses.setpos(9, 0)
+    Curses.addstr("+------d------e------f------+     ")
+    Curses.setpos(13, 0)
+    Curses.addstr("+------g------h------i------+     ")
+    case Curses.getch
+      when ?a
+        area_r = 0
+        area_l = 0
+      when ?b
+        area_r = 0
+        area_l = 1
+      when ?c
+        area_r = 0
+        area_l = 2
+      when ?d
+        area_r = 1
+        area_l = 0
+      when ?e
+        area_r = 1
+        area_l = 1
+      when ?f
+        area_r = 1
+        area_l = 2
+      when ?g
+        area_r = 2
+        area_l = 0
+      when ?h
+        area_r = 2
+        area_l = 1
+      when ?i
+        area_r = 2
+        area_l = 2
+      else
+        return false
+    end
+    Curses.setpos(1, 0)
+    Curses.addstr("+---------------------------+     ")
+    Curses.setpos(area_r*4+2, area_l*7+1)
+    Curses.addstr(",,(' ⌒｀; ;) ")
+    Curses.setpos(area_r*4+3, area_l*7+1)
+    Curses.addstr("(;;ﾉ;;　(;;;;")
+    Curses.setpos(area_r*4+4, area_l*7+1)
+    Curses.addstr("(´;^｀⌒);) ; ")
+    Curses.setpos(area_r*4+5, area_l*7+1)
+    Curses.addstr(",,(' ⌒｀; ;) ")
+    Curses.setpos(area_r*4+6, area_l*7+1)
+    Curses.addstr("(;;ﾉ;;　(;;;;")
+    Curses.setpos(area_r*4+7, area_l*7+1)
+    Curses.addstr("(´;^｀⌒);) ; ")
+    Curses.setpos(area_r*4+8, area_l*7+1)
+    Curses.addstr("(;;ﾉ;;　(;;;;")
+    for i in 0..1 do
+      for j in 0..1 do
+        @field[area_r + i][area_l + j] = 0
+      end
+    end
+    @bomb_counter += 1
+    Curses.getch
+    @score = @score / 2
+    return true
   end
 
   ###################################
@@ -110,33 +187,61 @@ class Field
   ###################################
   ## 外部クラスへのアクション       #
   ###################################
-  # 現在のフィールド配列を返す
-  def return_field
-    return @field
-  end
-
-  # 現在のフィールドをコンソールに表示する
+  # ゲーム画面の生成
   def show_field
-    @field.each do |n1, n2, n3, n4|
-      s1 = n1.to_s
-      s2 = n2.to_s
-      s3 = n3.to_s
-      s4 = n4.to_s
-      while s1.length < 4
-        s1 = " " << s1
-      end
-      while s2.length < 4
-        s2 = " " << s2
-      end
-      while s3.length < 4
-        s3 = " " << s3
-      end
-      while s4.length < 4
-        s4 = " " << s4
-      end
-      print("[#{s1}] [#{s2}] [#{s3}] [#{s4}]\n")
+    @score = @field.flatten.inject{|sum,n| sum + n} * 10 / (1 + @bomb_counter)
+    Curses.setpos(0, 0)
+    Curses.addstr("Score: #{@score}")
+    @field.each_with_index do |row, y|
+      Curses.setpos(y * 4 + 1, 0)
+      Curses.addstr("+------+------+------+------+     ")
+      Curses.setpos(y * 4 + 2, 0)
+      Curses.addstr("|      |      |      |      |     ")
+      line_str = "|" 
+      row.each_with_index do |cell| c = cell == 0 ? " " : cell
+      line_str += " #{c.to_s.center(4)} |"
+      end 
+      Curses.setpos(y * 4 + 3, 0)
+      Curses.addstr(line_str)
+      Curses.setpos(y * 4 + 4, 0)
+      Curses.addstr("|      |      |      |      |     ")
+    end 
+    Curses.setpos(17, 0)
+    Curses.addstr("+------+------+------+------+     ")
+    Curses.setpos(18, 0)
+    Curses.attrset(Curses.color_pair(1))
+    Curses.addstr("+-+-+-Command list-+-+-+")
+    Curses.setpos(19, 0)
+    Curses.addstr("  ←      : panels move to the leftside")
+    Curses.setpos(20, 0)
+    Curses.addstr("  →      : panels move to the rightside")
+    Curses.setpos(21, 0)
+    Curses.addstr("  ↑      : panels move to the upside")
+    Curses.setpos(22, 0)
+    Curses.addstr("  ↓      : panels move to the downside")
+    Curses.setpos(23, 0)
+    Curses.addstr("  r      : restart this game")
+    Curses.setpos(24, 0)
+    Curses.addstr("  q      : exit this game")
+    Curses.attroff(Curses::A_COLOR)
+    Curses.attrset(Curses.color_pair(4))
+    Curses.setpos(25, 0)
+    Curses.addstr("  b      : bomb mode")
+    Curses.setpos(26, 0)
+    Curses.attroff(Curses::A_COLOR)
+    if game_over_check
+      Curses.setpos(9, 0)
+      Curses.attrset(Curses.color_pair(2))
+      Curses.addstr("|        Game Over!         |")
+      Curses.attroff(Curses::A_COLOR)
     end
-  end
+    if goal_check
+      Curses.setpos(9, 0)
+      Curses.attrset(Curses.color_pair(3))
+      Curses.addstr("|      Conglaturation!      |")
+      Curses.attroff(Curses::A_COLOR)
+    end
+  end 
 
   # ゲームクリアチェック
   def goal_check
